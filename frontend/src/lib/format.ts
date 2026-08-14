@@ -5,6 +5,13 @@ export function fmt(n: number | undefined | null): string {
   return n.toLocaleString("zh-CN");
 }
 
+/** 万单位显示：>=1万 显示 "X.X万"，否则原样 */
+export function fmtWan(n: number | undefined | null): string {
+  if (n == null) return "-";
+  if (Math.abs(n) >= 10000) return `${(n / 10000).toFixed(1)}万`;
+  return n.toLocaleString("zh-CN");
+}
+
 export function fmtDur(sec: number | undefined | null): string {
   if (!sec || sec <= 0) return "-";
   if (sec >= 3600) return `${Math.floor(sec / 3600)}时${Math.floor((sec % 3600) / 60)}分`;

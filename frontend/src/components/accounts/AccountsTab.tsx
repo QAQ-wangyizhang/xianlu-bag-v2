@@ -1,18 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Button, Card, Empty, Input, Popconfirm, Space, Tag, Typography } from "antd";
-import { DeleteOutlined, PlusOutlined, SaveOutlined, TeamOutlined, UserOutlined } from "@ant-design/icons";
-import type { Account } from "@/types";
+import { App, Button, Card, ColorPicker, Empty, Input, Modal, Popconfirm, Space, Tag, Typography } from "antd";
+import { DeleteOutlined, PlusOutlined, SaveOutlined, UserOutlined } from "@ant-design/icons";
+import type { Account, Owner } from "@/types";
 import { apiGet, apiPost } from "@/lib/api";
+import OwnerTag from "@/components/OwnerTag";
 import AddAccountModal from "./AddAccountModal";
 
 const { Text } = Typography;
+const DEFAULT_OWNER_COLOR = "#6E8CA0";
+
+/** 移动端检测（与 CSS 断点一致：≤768px 视为移动端） */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
 
 export default function AccountsTab({
   accounts, owners, onChanged,
 }: {
-  accounts: Account[]; owners: string[]; onChanged: () => void;
+  accounts: Account[]; owners: Owner[]; onChanged: () => void;
 }) {
   const { message } = App.useApp();
   const [showModal, setShowModal] = useState(false);
@@ -20,6 +35,11 @@ export default function AccountsTab({
   const [dragUser, setDragUser] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [busy, setBusy] = useState("");
+  const isMobile = useIsMobile();
+  // 移动端：点击账号格子弹出的归属设置目标
+  const [assignTarget, setAssignTarget] = useState<Account | null>(null);
+
+  const ownerColor = (name: string) => owners.find((o) => o.name === name)?.color;
 
   const assign = async (username: string, owner: string) => {
     setBusy(username);
@@ -34,10 +54,23 @@ export default function AccountsTab({
     }
   };
 
+  const setColor = async (name: string, color: string) => {
+    setBusy("__clr_" + name);
+    try {
+      await apiPost("/api/owners/color", { name, color });
+      message.success(`已更新 ${name} 的颜色`);
+      onChanged();
+    } catch (e: any) {
+      message.error(e.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
   const createOwner = async () => {
     const name = newOwner.trim();
     if (!name) { message.error("请输入归属人名字"); return; }
-    if (owners.includes(name)) { message.error("该归属人已存在"); return; }
+    if (owners.some((o) => o.name === name)) { message.error("该归属人已存在"); return; }
     setBusy("__create__");
     try {
       await apiPost("/api/owners", { name });
@@ -77,10 +110,11 @@ export default function AccountsTab({
     }
   };
 
-  // 归属人圆角卡片（拖拽目标）
+  // 归属人圆角卡片（名称靠左 + 删除右上角；拖拽目标）
   const ownerCard = (name: string) => {
     const count = accounts.filter((a) => a.owner === name).length;
     const over = dragOver === name;
+    const color = ownerColor(name) || DEFAULT_OWNER_COLOR;
     return (
       <div
         key={name}
@@ -94,61 +128,69 @@ export default function AccountsTab({
           setDragUser(null);
         }}
         style={{
-          border: over ? "2px dashed #1677ff" : "1px solid #f0f0f0",
+          border: over ? "2px dashed var(--accent)" : "1px solid var(--line)",
           borderRadius: 16,
-          padding: 16,
-          background: over ? "#e6f4ff" : "#fff",
+          padding: "14px 16px",
+          background: over ? "var(--tint)" : "#fff",
         }}
       >
-        <Space style={{ width: "100%", justifyContent: "space-between" }}>
-          <Space>
-            <TeamOutlined style={{ color: "#d48806" }} />
-            <Text strong>{name}</Text>
-          </Space>
-          <Space>
-            <Tag>{count} 账号</Tag>
-            <Popconfirm
-              title={`删除归属人 ${name}？`}
-              description="其名下账号将变为未分配"
-              okText="删除"
-              okButtonProps={{ danger: true }}
-              cancelText="取消"
-              onConfirm={() => removeOwner(name)}
-            >
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} loading={busy === "__rm_" + name} />
-            </Popconfirm>
-          </Space>
+        {/* 第一行：名称靠左，删除右上角 */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 6 }}>
+          <Text strong style={{ fontSize: 15, color }}>{name}</Text>
+          <Popconfirm
+            title={`删除归属人 ${name}？`}
+            description="其名下账号将变为未分配"
+            okText="删除"
+            okButtonProps={{ danger: true }}
+            cancelText="取消"
+            onConfirm={() => removeOwner(name)}
+          >
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} loading={busy === "__rm_" + name} />
+          </Popconfirm>
+        </div>
+        {/* 第二行：颜色 / 账号数 */}
+        <Space size={6}>
+          <ColorPicker
+            size="small"
+            value={color}
+            disabled={busy === "__clr_" + name}
+            onChange={(c) => setColor(name, c.toHexString())}
+            presets={[{ label: "水墨", colors: ["#5B7B8C", "#6FA287", "#C9A15F", "#C47B6D", "#8A7FA3", "#4A5561", "#5D8CA8"] }]}
+          />
+          <Tag style={{ marginInlineEnd: 0 }}>{count} 账号</Tag>
         </Space>
-        <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 8 }}>
+        <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 6 }}>
           把账号拖到这里完成分配
         </Text>
       </div>
     );
   };
 
-  // 账号格子（可拖拽）
+  // 账号格子（桌面：拖拽分配；移动端：点击弹窗设置归属）
   const accountCell = (a: Account) => (
     <div
       key={a.username}
       draggable
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", a.username); setDragUser(a.username); }}
       onDragEnd={() => setDragUser(null)}
+      onClick={() => { if (isMobile) setAssignTarget(a); }}
       style={{
-        border: "1px solid #f0f0f0",
+        border: "1px solid var(--line)",
         borderRadius: 12,
         padding: "10px 12px",
         background: "#fff",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-end",
         gap: 8,
-        cursor: "grab",
+        cursor: isMobile ? "pointer" : "grab",
         opacity: dragUser === a.username ? 0.4 : 1,
       }}
     >
-      <UserOutlined style={{ color: "#999" }} />
-      <Text strong>{a.username}</Text>
-      {a.owner ? <Tag color="geekblue">{a.owner}</Tag> : <Tag>未分配</Tag>}
-      <span style={{ flex: 1 }} />
+      <UserOutlined style={{ color: "#999", flexShrink: 0, alignSelf: "center" }} />
+      <Text strong ellipsis={{ tooltip: a.username }} style={{ minWidth: 0, flex: 1 }}>
+        {a.username}
+      </Text>
+      {a.owner ? <OwnerTag name={a.owner} color={ownerColor(a.owner)} /> : <Tag style={{ flexShrink: 0 }}>未分配</Tag>}
       <Popconfirm
         title="确认删除账号？"
         description="不影响游戏本体，只是从本工具移除"
@@ -169,7 +211,7 @@ export default function AccountsTab({
       {/* 顶部操作栏 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
-          <Text strong style={{ fontSize: 16, color: "#d48806" }}>账号管理</Text>
+          <Text strong style={{ fontSize: 16, color: "var(--accent)" }}>账号管理</Text>
           <Space wrap>
             <Input
               placeholder="创建归属人，如：小明"
@@ -189,17 +231,19 @@ export default function AccountsTab({
       </Card>
 
       {/* 归属人圆角卡片 */}
-      <Text strong style={{ color: "#d48806" }}>归属人</Text>
+      <Text strong style={{ color: "var(--accent)" }}>归属人</Text>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12, margin: "8px 0 20px" }}>
-        {owners.map(ownerCard)}
+        {owners.map((o) => ownerCard(o.name))}
         {!owners.length && (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有归属人，可在上方创建" />
         )}
       </div>
 
       {/* 账号格子（拖拽到归属人卡片分配） */}
-      <Text strong style={{ color: "#d48806" }}>账号（拖拽到上方归属人卡片完成分配）</Text>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12, marginTop: 8 }}>
+      <Text strong style={{ color: "var(--accent)" }}>
+        {isMobile ? "账号（点击账号可设置归属人）" : "账号（拖拽到上方归属人卡片完成分配）"}
+      </Text>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginTop: 8 }}>
         {accounts.map(accountCell)}
       </div>
 
@@ -210,7 +254,127 @@ export default function AccountsTab({
           onSuccess={() => { setShowModal(false); onChanged(); }}
         />
       )}
+
+      {/* 移动端：点击账号格子弹出的归属设置 */}
+      <Modal
+        open={!!assignTarget}
+        title={`设置 ${assignTarget?.username || ""} 的归属`}
+        onCancel={() => setAssignTarget(null)}
+        footer={null}
+        destroyOnClose
+      >
+        {assignTarget && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {owners.map((o) => {
+              const count = accounts.filter((a) => a.owner === o.name).length;
+              return (
+                <div
+                  key={o.name}
+                  onClick={() => { assign(assignTarget.username, o.name); setAssignTarget(null); }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 12px",
+                    border: "1px solid var(--line)",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    background: assignTarget.owner === o.name ? "var(--tint)" : "#fff",
+                  }}
+                >
+                  <OwnerTag name={o.name} color={ownerColor(o.name)} />
+                  <Tag style={{ marginInlineEnd: 0 }}>{count} 账号</Tag>
+                  {assignTarget.owner === o.name && <Text type="secondary" style={{ marginLeft: "auto" }}>当前</Text>}
+                </div>
+              );
+            })}
+            <div
+              onClick={() => { assign(assignTarget.username, ""); setAssignTarget(null); }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 12px",
+                border: "1px solid var(--line)",
+                borderRadius: 10,
+                cursor: "pointer",
+                background: !assignTarget.owner ? "var(--tint)" : "#fff",
+              }}
+            >
+              <Tag style={{ marginInlineEnd: 0 }}>未分配</Tag>
+              {!assignTarget.owner && <Text type="secondary" style={{ marginLeft: "auto" }}>当前</Text>}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 拉取日志（每日 0 点自动清理） */}
+      <FetchLogs />
     </div>
+  );
+}
+
+/** 拉取日志表格 */
+function FetchLogs() {
+  const [logs, setLogs] = useState<{ time: string; username: string; ok: boolean; ms: number; error?: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const d = await apiGet<{ logs: typeof logs }>("/api/fetch-logs");
+      setLogs(d.logs || []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  return (
+    <Card
+      size="small"
+      title={<Text strong style={{ color: "var(--accent)" }}>拉取日志（每日 0 点自动清理）</Text>}
+      extra={<Button type="link" size="small" onClick={load} loading={loading}>刷新</Button>}
+      style={{ marginTop: 16 }}
+    >
+      {!logs.length ? (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无拉取记录" />
+      ) : (
+        <div style={{ maxHeight: 360, overflowY: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--ink-2)", borderBottom: "1px solid var(--line)" }}>
+                <th style={{ padding: "6px 8px" }}>时间</th>
+                <th style={{ padding: "6px 8px" }}>账号</th>
+                <th style={{ padding: "6px 8px" }}>状态</th>
+                <th style={{ padding: "6px 8px" }}>耗时</th>
+                <th style={{ padding: "6px 8px" }}>信息</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid var(--line-2)" }}>
+                  <td style={{ padding: "6px 8px", color: "var(--ink-2)" }} className="tabular-nums">{l.time}</td>
+                  <td style={{ padding: "6px 8px" }}>{l.username}</td>
+                  <td style={{ padding: "6px 8px" }}>
+                    <Tag color={l.ok ? "#6FA287" : "#C47B6D"} style={{ borderRadius: 4 }}>
+                      {l.ok ? "成功" : "失败"}
+                    </Tag>
+                  </td>
+                  <td style={{ padding: "6px 8px", color: "var(--ink-2)" }} className="tabular-nums">{l.ms}ms</td>
+                  <td style={{ padding: "6px 8px", color: l.ok ? "var(--ink-3)" : "var(--terracotta)", fontSize: 12 }}>
+                    {l.error || (l.ms < 500 ? "缓存" : "")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -253,7 +417,7 @@ function GameConfig() {
   return (
     <Card
       size="small"
-      title={<Text strong style={{ color: "#d48806" }}>爬取地址（游戏服 Base）</Text>}
+      title={<Text strong style={{ color: "var(--accent)" }}>爬取地址（游戏服 Base）</Text>}
       style={{ marginBottom: 16 }}
     >
       <Space wrap>

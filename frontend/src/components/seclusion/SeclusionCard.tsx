@@ -64,11 +64,11 @@ export default function SeclusionCard({
             <Statistic title="累计轮数" value={String(status.cycleCount || 0)} valueStyle={{ fontSize: 16 }} />
           </Space>
 
-          <Text strong style={{ color: "#d48806" }}>操作日志</Text>
+          <Text strong style={{ color: "var(--accent)" }}>操作日志</Text>
           <div
             style={{
-              background: "#fafafa",
-              border: "1px solid #f0f0f0",
+              background: "var(--cell)",
+              border: "1px solid var(--line)",
               borderRadius: 8,
               padding: 8,
               height: 192,

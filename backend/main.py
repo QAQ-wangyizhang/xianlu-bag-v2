@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from .config import PORT, FRONTEND_OUT
 from .store import load, accounts
@@ -13,8 +14,12 @@ from .routers import bag as bag_router
 from .routers import seclusion as seclusion_router
 from .routers import config as config_router
 from .routers import owners as owners_router
+from .routers import faction as faction_router
+from .routers import portal as portal_router
 from .materials import MATERIAL_NAMES, MATERIAL_CATEGORY, REALM_NAMES
 from .constants import GRADE_TIERS, DUNGEON_SCHEDULE, DUNGEON_BONUS, REALM_OVERRIDE, WEEKDAY_NAMES
+from . import faction_signup
+from . import fetch_logs
 
 app = FastAPI(title="修仙录 · 多账号工具 API")
 
@@ -24,6 +29,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# 文本类响应 gzip 压缩（HTML/JS/CSS/JSON 体积明显下降）
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # 注册路由
 app.include_router(accounts_router.router)
@@ -31,12 +38,20 @@ app.include_router(bag_router.router)
 app.include_router(seclusion_router.router)
 app.include_router(config_router.router)
 app.include_router(owners_router.router)
+app.include_router(faction_router.router)
+app.include_router(portal_router.router)
 
 
 @app.on_event("startup")
 async def startup():
     load()
+    faction_signup.load()
+    fetch_logs.load()
     print(f"[启动] 已加载 {len(accounts)} 个账号，端口 {PORT}")
+    # 启动后台定时器：自动报名 + 拉取日志每日清理
+    import asyncio
+    asyncio.create_task(faction_signup.run_loop())
+    asyncio.create_task(fetch_logs.cleanup_loop())
 
 
 # ---- 游戏数据接口（供前端查询）----
@@ -64,7 +79,11 @@ if FRONTEND_OUT.exists():
             return {"error": "Not Found", "path": full_path}
         file_path = FRONTEND_OUT / full_path
         if file_path.is_file():
-            return FileResponse(file_path)
+            resp = FileResponse(file_path)
+            # 哈希命名的不可变静态资源 → 浏览器长缓存，连请求都不发
+            if full_path.startswith("_next/static/"):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return resp
         # SPA fallback
         index = FRONTEND_OUT / "index.html"
         if index.exists():

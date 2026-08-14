@@ -18,8 +18,26 @@ GRADE_TIERS: list[dict[str, Any]] = [
         "dao_base_ore": 12, "gu_powder": 12, "moon_bead": 12, "fire_essence": 10,
         "cloud_silk": 10, "jade_fragment": 10, "blood_iron": 8, "thunder_essence": 8,
         "spirit_copper": 8}},
-    {"key": "lianxu", "name": "炼虚段（待实测）", "range": "46→54", "perItem": {}, "placeholder": True},
-    {"key": "heti", "name": "合体段（待实测）", "range": "55→63", "perItem": {}, "placeholder": True},
+    {"key": "lianxu", "name": "炼虚段 ⭐", "range": "45→54", "perItem": {
+        "spirit_stone": 129600, "void_essence": 108, "transformation_crystal": 27,
+        "dao_base_ore": 20, "cloud_silk": 18, "moon_bead": 16, "fire_essence": 15,
+        "blood_iron": 15, "water_essence": 15, "jade_fragment": 14, "thunder_essence": 12,
+        "spirit_copper": 12}},
+    {"key": "heti", "name": "合体段 ⭐", "range": "54→63", "perItem": {
+        "spirit_stone": 259200, "unity_crystal": 108, "void_essence": 27,
+        "dao_base_ore": 25, "cloud_silk": 24, "moon_bead": 22, "fire_essence": 20,
+        "blood_iron": 20, "water_essence": 20, "jade_fragment": 20, "spirit_copper": 18,
+        "thunder_essence": 16}},
+    {"key": "dacheng", "name": "大乘段 ⭐", "range": "63→72", "perItem": {
+        "spirit_stone": 518400, "myriad_lotus": 108, "unity_crystal": 27,
+        "dao_base_ore": 30, "cloud_silk": 30, "moon_bead": 28, "fire_essence": 25,
+        "blood_iron": 25, "water_essence": 25, "jade_fragment": 25, "spirit_copper": 22,
+        "thunder_essence": 20}},
+    {"key": "dujie", "name": "渡劫段 ⭐", "range": "72→81", "perItem": {
+        "spirit_stone": 1036800, "tribulation_thunder_core": 108, "myriad_lotus": 27,
+        "dao_base_ore": 36, "cloud_silk": 36, "moon_bead": 34, "fire_essence": 30,
+        "blood_iron": 30, "water_essence": 30, "jade_fragment": 30, "spirit_copper": 28,
+        "thunder_essence": 24}},
 ]
 
 # 秘境每日刷新表（奇偶周轮换）

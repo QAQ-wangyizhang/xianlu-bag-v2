@@ -120,7 +120,7 @@ export function calcFarmPlan(
 
 /** 根据角色境界推断默认升段目标 */
 export function defaultTierForRealm(realmKey: string | undefined): string {
-  const order = ["lianqi", "zhuji", "jindan", "yuanying", "huashen", "lianxu", "heti"];
+  const order = ["lianqi", "zhuji", "jindan", "yuanying", "huashen", "lianxu", "heti", "dacheng", "dujie"];
   const idx = order.indexOf(realmKey || "");
   if (idx < 0) return "huashen";
   return order[Math.min(idx + 1, order.length - 1)];

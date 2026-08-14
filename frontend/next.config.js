@@ -6,7 +6,7 @@ const nextConfig = {
   // 开发时代理 API 到 FastAPI
   async rewrites() {
     return [
-      { source: '/api/:path*', destination: 'http://localhost:5918/api/:path*' },
+      { source: '/api/:path*', destination: 'http://localhost:5917/api/:path*' },
     ];
   },
 };

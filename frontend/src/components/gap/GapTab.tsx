@@ -2,21 +2,26 @@
 
 import { useState, useEffect } from "react";
 import {
-  Alert, Button, Card, Checkbox, Empty, InputNumber, Progress,
+  Alert, Card, Checkbox, Empty, InputNumber, Progress,
   Select, Space, Tag, Typography,
 } from "antd";
-import type { Bag, GameConstants, GradeTier } from "@/types";
-import { fmt, realmText } from "@/lib/format";
+import { CaretRightOutlined } from "@ant-design/icons";
+import type { Account, Bag, GameConstants, GradeTier, Owner } from "@/types";
+import { fmt, fmtWan, realmText } from "@/lib/format";
 import { calcFarmPlan, defaultTierForRealm } from "@/lib/farm";
 import DungeonToday from "./DungeonToday";
 import StoneCard from "./StoneCard";
+import SectTag from "@/components/SectTag";
+import OwnerTag from "@/components/OwnerTag";
+import RealmTag from "@/components/RealmTag";
+import CollapseBox from "@/components/CollapseBox";
 
 const { Text } = Typography;
 
 export default function GapTab({
-  bags, constants, loadAll, loading,
+  bags, accounts, owners, constants, loadAll, loading,
 }: {
-  bags: Bag[]; constants: GameConstants | null; loadAll: () => void; loading: boolean;
+  bags: Bag[]; accounts: Account[]; owners: Owner[]; constants: GameConstants | null; loadAll: () => void; loading: boolean;
 }) {
   const [tierKey, setTierKey] = useState("");
   const [pieces, setPieces] = useState(10);
@@ -73,6 +78,11 @@ export default function GapTab({
   }
 
   const okBags = bags.filter((b) => b.ok);
+  const ownerInfo = (username: string) => {
+    const name = accounts.find((a) => a.username === username)?.owner || "";
+    const color = owners.find((o) => o.name === name)?.color;
+    return { name, color };
+  };
 
   return (
     <div>
@@ -81,20 +91,26 @@ export default function GapTab({
       <DungeonToday bags={okBags} constants={constants} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
-        {okBags.map((bag) => (
-          <GapCard
-            key={bag.username}
-            bag={bag}
-            tier={tier}
-            pieces={pieces}
-            onlyLack={onlyLack}
-            nameOf={nameOf}
-            realmNames={realmNames}
-            dungeonSchedule={dungeonSchedule}
-            dungeonBonus={dungeonBonus}
-            realmOverride={realmOverride}
-          />
-        ))}
+        {okBags.map((bag, i) => {
+          const o = ownerInfo(bag.username);
+          return (
+            <GapCard
+              key={bag.username}
+              bag={bag}
+              owner={o.name}
+              ownerColor={o.color}
+              defaultOpen={i === 0}
+              tier={tier}
+              pieces={pieces}
+              onlyLack={onlyLack}
+              nameOf={nameOf}
+              realmNames={realmNames}
+              dungeonSchedule={dungeonSchedule}
+              dungeonBonus={dungeonBonus}
+              realmOverride={realmOverride}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -104,7 +120,7 @@ function GapControls({ tiers, tierKey, setTierKey, pieces, setPieces, onlyLack, 
   return (
     <Card size="small" style={{ marginBottom: 16 }}>
       <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Text strong style={{ fontSize: 16, color: "#d48806" }}>升段缺口计算</Text>
+        <Text strong style={{ fontSize: 16, color: "var(--accent)" }}>升段缺口计算</Text>
         <Text type="secondary">选择目标境界段，计算每个账号当前材料升满一套装备还差多少。</Text>
         <Space wrap>
           <Space>
@@ -134,8 +150,9 @@ function GapControls({ tiers, tierKey, setTierKey, pieces, setPieces, onlyLack, 
   );
 }
 
-export function GapCard({ bag, tier, pieces, onlyLack, nameOf, realmNames, dungeonSchedule, dungeonBonus, realmOverride }: any) {
-  const [showAll, setShowAll] = useState(false);
+export function GapCard({ bag, owner, ownerColor, tier, pieces, onlyLack, nameOf, realmNames, dungeonSchedule, dungeonBonus, realmOverride, defaultOpen = true }: any) {
+  const [open, setOpen] = useState<boolean>(defaultOpen);
+  const toggle = () => setOpen((o) => !o);
   const p = bag.player;
   const mats = { ...(bag.materials || {}), spirit_stone: p?.spirit_stone || 0 };
 
@@ -156,46 +173,82 @@ export function GapCard({ bag, tier, pieces, onlyLack, nameOf, realmNames, dunge
   const lackCount = gaps.filter((g) => g.lack > 0).length + (stoneLack > 0 ? 1 : 0);
   const filtered = onlyLack ? gaps.filter((g) => g.lack > 0) : gaps;
 
-  // 默认每卡显示 8 种，超出点「查看更多」
-  const VISIBLE_GAPS = 8;
-  const shown = showAll ? filtered : filtered.slice(0, VISIBLE_GAPS);
-  const hasMore = filtered.length > VISIBLE_GAPS;
-  const hiddenCount = filtered.length - shown.length;
+  // 灵石刷满预估：1 体力 = 1200 灵石，每天自然恢复 48 体力
+  const stoneLackStamina = Math.ceil(stoneLack / 1200);
+  const stoneDays = Math.ceil(stoneLackStamina / 48);
 
   const title = (
-    <Space wrap size={8}>
-      <Text strong>{p.name || bag.username}</Text>
-      <Tag>{bag.username}</Tag>
-      <Tag color="gold">{realmText(p, realmNames)}</Tag>
-      <Text type="warning">灵石 {fmt(p.spirit_stone)}</Text>
-      {allMet ? (
-        <Tag color="success">材料齐全 ✓</Tag>
-      ) : (
-        <Tag color="error">缺 {lackCount} 种</Tag>
-      )}
-    </Space>
+    <div
+      style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8, width: "100%" }}
+      onClick={toggle}
+    >
+      {/* 箭头独立一行，垂直居中于整个标题块（换行时也在两行中间） */}
+      <CaretRightOutlined
+        style={{
+          transition: "transform 200ms",
+          transform: open ? "rotate(90deg)" : "rotate(0deg)",
+          color: "var(--slate)",
+          fontSize: 12,
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+        <span className="serif-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+          {p.name || bag.username}
+        </span>
+        <Tag style={{ background: "var(--muted)", border: "none", color: "var(--slate)", fontSize: 12 }}>
+          {bag.username}
+        </Tag>
+        {owner && <OwnerTag name={owner} color={ownerColor} />}
+        <SectTag name={p.sect_name} />
+        <RealmTag realmKey={p.major_realm} name={realmText(p, realmNames)} />
+        <Text type="warning">灵石 {fmtWan(p.spirit_stone)}</Text>
+        {allMet ? (
+          <Tag color="#6FA287" style={{ borderRadius: 4 }}>材料齐全 ✓</Tag>
+        ) : (
+          <Tag color="#C47B6D" style={{ borderRadius: 4 }}>缺 {lackCount} 种</Tag>
+        )}
+      </div>
+    </div>
   );
 
   return (
     <Card size="small" title={title}>
-      <Text type="secondary">
-        升满 <Text strong style={{ color: "#d48806" }}>{tier.name}</Text> 共 {pieces} 件装备的材料缺口：
-      </Text>
+      {/* 折叠态：灵石缺口 + 刷满天数摘要 */}
+      {!open && stoneNeed > 0 && (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap", paddingTop: 4 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>灵石缺口</Text>
+          <Text className="tabular-nums" style={{ fontSize: 13, color: stoneLack > 0 ? "var(--terracotta)" : "var(--bamboo)", fontWeight: 600 }}>
+            {stoneLack > 0 ? `缺 ${fmtWan(stoneLack)}` : "已充足 ✓"}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            当前 {fmtWan(stoneHave)} / 需要 {fmtWan(stoneNeed)}
+          </Text>
+          {stoneLack > 0 && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              · 约 <Text strong style={{ color: "var(--accent)" }}>{stoneDays} 天</Text> 刷满（{fmt(stoneLackStamina)} 体力）
+            </Text>
+          )}
+        </div>
+      )}
 
-      {stoneNeed > 0 && <div style={{ marginTop: 12 }}><StoneCard have={stoneHave} need={stoneNeed} lack={stoneLack} /></div>}
+      {/* 展开态：完整缺口（高度动画） */}
+      <CollapseBox open={open}>
+        <div style={{ paddingTop: open ? 12 : 0 }}>
+          <Text type="secondary">
+            升满 <Text strong style={{ color: "var(--accent)" }}>{tier.name}</Text> 共 {pieces} 件装备的材料缺口：
+          </Text>
 
-      {!filtered.length && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无" style={{ marginTop: 12 }} />}
+          {!filtered.length && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无" style={{ marginTop: 12 }} />}
 
-      {/* 材料缺口：紧凑网格，一个材料一个小卡片（完整文案不省略） */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: 8,
-          marginTop: 12,
-        }}
-      >
-        {shown.map((g) => {
+          {/* 6 列网格（移动端 2 列）：灵石卡跨 3 列，材料每行 6 个；1fr 等宽 + gap 12 一致 */}
+          <div className="gap-grid" style={{ gap: 12 }}>
+            {stoneNeed > 0 && (
+              <div className="gap-stone">
+                <StoneCard have={stoneHave} need={stoneNeed} lack={stoneLack} />
+              </div>
+            )}
+            {filtered.map((g) => {
           const pct = g.need > 0 ? Math.min(100, Math.round((g.have / g.need) * 100)) : 0;
           const plan = g.lack > 0 ? calcFarmPlan(g.key, g.lack, p.major_realm, dungeonSchedule, dungeonBonus, realmOverride) : null;
           const s0 = plan?.schedule[0];
@@ -209,40 +262,39 @@ export function GapCard({ bag, tier, pieces, onlyLack, nameOf, realmNames, dunge
             : `秘境每次仅 ${s0?.yieldPer || "?"} 个，单靠秘境需太久，建议搭配交易所购买`;
 
           return (
-            <Card key={g.key} size="small" style={{ borderColor: g.lack > 0 ? "#ffccc7" : "#b7eb8f" }}>
-              <Space style={{ width: "100%", justifyContent: "space-between" }} size={4}>
-                <Text strong={g.lack > 0} type={g.lack === 0 ? "success" : undefined} ellipsis style={{ maxWidth: 130 }}>
-                  {g.name}
-                </Text>
-                {g.lack > 0
-                  ? <Tag color="error" style={{ marginInlineEnd: 0 }}>缺 {fmt(g.lack)}</Tag>
-                  : <Tag color="success" style={{ marginInlineEnd: 0 }}>✓</Tag>}
-              </Space>
-              <Progress
-                percent={pct}
-                showInfo={false}
-                size="small"
-                strokeColor={g.lack === 0 ? "#52c41a" : "#d48806"}
-                style={{ margin: "8px 0 4px" }}
-              />
-              <Text type="secondary" style={{ fontSize: 12 }}>{fmt(g.have)} / {fmt(g.need)}</Text>
-              {planText && (
-                <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 8 }}>
-                  📍 {planText}
-                </Text>
-              )}
-            </Card>
+            <div key={g.key} style={{ minWidth: 0 }}>
+              <Card size="small" style={{ borderColor: g.lack > 0 ? "#f0dcd5" : "#d9e6dc" }}>
+                <Space align="end" wrap style={{ width: "100%", justifyContent: "space-between" }} size={4}>
+                  <Text strong={g.lack > 0} type={g.lack === 0 ? "success" : undefined} ellipsis style={{ maxWidth: 100 }}>
+                    {g.name}
+                  </Text>
+                  {g.lack > 0
+                    ? <Tag color="error" style={{ marginInlineEnd: 0 }}>缺 {fmt(g.lack)}</Tag>
+                    : <Tag color="success" style={{ marginInlineEnd: 0 }}>✓</Tag>}
+                </Space>
+                <Progress
+                  percent={pct}
+                  showInfo={false}
+                  size="small"
+                  strokeColor={g.lack === 0 ? "var(--bamboo)" : "var(--accent)"}
+                  style={{ margin: "8px 0 4px" }}
+                />
+                <Text type="secondary" style={{ fontSize: 12 }}>{fmt(g.have)} / {fmt(g.need)}</Text>
+                {/* 计划文案区：桌面固定等高，移动端自适应完整显示（不截断） */}
+                <div className="gap-plan">
+                  {planText && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      📍 {planText}
+                    </Text>
+                  )}
+                </div>
+              </Card>
+            </div>
           );
         })}
-      </div>
-
-      {hasMore && (
-        <div style={{ textAlign: "center", marginTop: 8 }}>
-          <Button type="link" onClick={() => setShowAll((o) => !o)}>
-            {showAll ? "收起" : `查看更多（还有 ${hiddenCount} 种）`}
-          </Button>
+          </div>
         </div>
-      )}
+      </CollapseBox>
     </Card>
   );
 }

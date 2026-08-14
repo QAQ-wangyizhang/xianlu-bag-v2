@@ -6,6 +6,11 @@ export interface Account {
   owner?: string;
 }
 
+export interface Owner {
+  name: string;
+  color?: string;
+}
+
 export interface Player {
   name?: string;
   sect_name?: string;
@@ -95,4 +100,4 @@ export interface GameConstants {
   weekdayNames: string[];
 }
 
-export type TabName = "bags" | "gap" | "seclusion" | "owners" | "accounts";
+export type TabName = "bags" | "gap" | "signup" | "owners" | "accounts";

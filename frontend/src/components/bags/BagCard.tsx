@@ -1,31 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Descriptions, Divider, Empty, Progress, Space, Statistic, Tag, Typography } from "antd";
+import {
+  Button, Card, Col, Descriptions, Divider, Empty, Progress, Row, Skeleton, Space, Statistic, Tag, Typography,
+} from "antd";
+import { CaretRightOutlined, GlobalOutlined } from "@ant-design/icons";
 import type { Bag, GameConstants } from "@/types";
-import { fmt, fmtDur, realmText } from "@/lib/format";
+import { fmt, fmtDur, fmtWan, realmText } from "@/lib/format";
+import SectTag from "@/components/SectTag";
+import OwnerTag from "@/components/OwnerTag";
+import RealmTag from "@/components/RealmTag";
+import { realmColor } from "@/lib/realm";
+import CollapseBox from "@/components/CollapseBox";
 
 const { Text } = Typography;
 
 const CAT_ORDER = ["强化材料", "突破辅料", "功法", "消耗品", "礼盒", "功能道具", "其他"];
 
+/** 材料分类 → 图标路径 */
+const CAT_ICONS: Record<string, string> = {
+  强化材料: "/icons/mat-strengthen.png",
+  突破辅料: "/icons/mat-breakthrough.png",
+  功法: "/icons/mat-skill.png",
+  消耗品: "/icons/mat-consumable.png",
+  礼盒: "/icons/mat-gift.png",
+};
+
 /**
- * 账号背包卡片（瀑布流 + 懒加载）：
- * - 收起时：标题（名称/id/所属人）+ 体力、修为 Descriptions（含差多少进阶 + 进度条）
- * - 点击标题展开：完整属性 + 物品格子（Statistic，一次全展示）
+ * 账号背包卡片（瀑布流）：默认折叠
+ * - 收起：标题（serif 名 / 扁平 Tag / 灵石门派境界）+ 体力、修为横排进度
+ * - 展开：双栏属性 + 物品格子（一次全展示）
+ * - forceOpen：搜索匹配时强制展开（外部控制）
  */
 export default function BagCard({
-  bag, owner, search, onlyHas, constants,
+  bag, owner, ownerColor, search, onlyHas, constants, forceOpen, gameBase,
 }: {
-  bag: Bag; owner?: string; search: string; onlyHas: boolean; constants: GameConstants | null;
+  bag: Bag; owner?: string; ownerColor?: string; search: string; onlyHas: boolean; constants: GameConstants | null; forceOpen?: boolean; gameBase?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const isOpen = forceOpen || open;
   const toggle = () => setOpen((o) => !o);
 
-  // 加载中
+  // 加载中（骨架屏）
   if (bag.loading) {
     return (
-      <Card size="small" title={<Space><Text strong>{bag.username}</Text><Tag color="processing">加载中…</Tag></Space>} />
+      <Card size="small">
+        <Skeleton active title={{ width: "40%" }} paragraph={{ rows: 2 }} />
+      </Card>
     );
   }
 
@@ -41,6 +62,7 @@ export default function BagCard({
   const p = bag.player!;
   const st = bag.stamina;
   const realm = bag.realm;
+  const realmNames = constants?.realmNames || {};
   const exp = realm?.exp ?? p.exp ?? 0;
   const expNeeded = realm?.exp_needed ?? 0;
   const expLack = expNeeded > 0 ? Math.max(0, expNeeded - exp) : null;
@@ -57,95 +79,130 @@ export default function BagCard({
     fullTimeSec = nextSec + (staminaFull - 1) * regenSec;
   }
 
+  const labelStyle = { color: "var(--ink-2)", width: 56 } as const;
+
   const title = (
-    <Space wrap size={8} onClick={toggle} style={{ cursor: "pointer", userSelect: "none", width: "100%" }}>
-      <span
+    <div
+      style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8, width: "100%" }}
+      onClick={toggle}
+    >
+      {/* 箭头独立，垂直居中于整个标题块（换行时也在两行中间） */}
+      <CaretRightOutlined
         style={{
-          display: "inline-block",
-          color: "#d48806",
-          transition: "transform .2s",
-          transform: open ? "rotate(90deg)" : undefined,
+          transition: "transform 200ms",
+          transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+          color: "var(--slate)",
+          fontSize: 12,
+          flexShrink: 0,
         }}
-      >
-        ▶
-      </span>
-      <Text strong>{p.name || bag.username}</Text>
-      <Tag>{bag.username}</Tag>
-      {owner && <Tag color="geekblue">{owner}</Tag>}
-      <span style={{ flex: 1 }} />
-      <Text type="warning">灵石 {fmt(p.spirit_stone)}</Text>
-    </Space>
+      />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+        <span className="serif-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+          {p.name || bag.username}
+        </span>
+        <Tag style={{ background: "var(--muted)", border: "none", color: "var(--slate)", fontSize: 12 }}>
+          {bag.username}
+        </Tag>
+        {owner && <OwnerTag name={owner} color={ownerColor} />}
+        <SectTag name={p.sect_name} />
+        <RealmTag realmKey={p.major_realm} name={realmText(p, realmNames)} />
+      </div>
+    </div>
   );
 
   return (
-    <Card size="small" title={title} styles={{ body: { paddingTop: 8, paddingBottom: 12 } }}>
-      {/* 体力 / 修为 摘要（Space 统一间距） */}
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
-        {/* 体力 */}
-        <Descriptions size="small" column={1} colon={false}>
-          <Descriptions.Item label="体力" labelStyle={{ width: 48 }}>
-            <div style={{ width: "100%" }}>
-              <Text>{st ? `${st.current}/${st.max}` : "-"}</Text>
-              {staminaFull > 0 && (
-                <Text type="secondary">
-                  {" "}· 差 {fmt(staminaFull)}{fullTimeSec ? ` · 约 ${fmtDur(fullTimeSec)} 回满` : " 回满"}
-                </Text>
-              )}
-              {st && staminaFull === 0 && <Text type="success"> · 已满</Text>}
-              <Progress
-                percent={staminaPct}
-                showInfo={false}
-                size="small"
-                strokeColor={staminaPct < 30 ? "#ff4d4f" : staminaPct < 60 ? "#faad14" : "#52c41a"}
-                style={{ margin: "6px 0 0" }}
-              />
-            </div>
-          </Descriptions.Item>
-        </Descriptions>
+    <Card size="small" title={title}>
+      {/* 灵石 / 门派 / 境界 */}
+      <Descriptions column={{ xs: 1, sm: 3 }} size="small" styles={{ label: labelStyle }}>
+        <Descriptions.Item label="灵石">
+          <span className="tabular-nums" style={{ color: "var(--ochre)", fontWeight: 500 }}>
+            {fmtWan(p.spirit_stone)}
+          </span>
+        </Descriptions.Item>
+        <Descriptions.Item label="门派">{p.sect_name || "-"}</Descriptions.Item>
+        <Descriptions.Item label="境界">{realmText(p, realmNames)}</Descriptions.Item>
+      </Descriptions>
 
-        {/* 体力 / 修为 分割线 */}
-        <Divider style={{ margin: 0 }} />
+      <Divider style={{ margin: "12px 0" }} />
 
-        {/* 修为（含差多少进阶） */}
-        <Descriptions size="small" column={1} colon={false}>
-          <Descriptions.Item label="修为" labelStyle={{ width: 48 }}>
-            <div style={{ width: "100%" }}>
-              <Text>{fmt(exp)}</Text>
-              {expNeeded > 0 && (
-                <Text type="secondary">
-                  {" "}/ {fmt(expNeeded)}
-                  {expLack != null && (
-                    <>
-                      {" "}· 差 <Text type={expLack === 0 ? "success" : "warning"}>{fmt(expLack)}</Text> 进阶
-                    </>
-                  )}
-                </Text>
-              )}
-              <Progress
-                percent={expPct}
-                showInfo={false}
-                size="small"
-                strokeColor={expPct >= 100 ? "#52c41a" : "#d48806"}
-                style={{ margin: "6px 0 0" }}
-              />
-            </div>
-          </Descriptions.Item>
-        </Descriptions>
-      </Space>
+      {/* 体力 / 修为（横排紧凑 + 内联百分比进度） */}
+      <Descriptions column={1} size="small" styles={{ label: labelStyle }}>
+        <Descriptions.Item label="体力">
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, width: "100%", flexWrap: "wrap" }}>
+            <span className="tabular-nums" style={{ fontSize: 13 }}>
+              {st ? `${st.current}/${st.max}` : "-"}
+            </span>
+            {staminaFull > 0 && (
+              <span style={{ fontSize: 12, color: "var(--ink-2)" }}>
+                差 {fmt(staminaFull)} 回满{fullTimeSec ? ` · 约 ${fmtDur(fullTimeSec)}` : ""}
+              </span>
+            )}
+            {st && staminaFull === 0 && (
+              <span style={{ fontSize: 12, color: "var(--bamboo)" }}>已满</span>
+            )}
+            <Progress
+              percent={staminaPct}
+              size="small"
+              strokeColor={staminaPct < 30 ? "var(--terracotta)" : staminaPct < 60 ? "var(--ochre)" : "var(--bamboo)"}
+              style={{ flex: 1, maxWidth: 120, margin: 0 }}
+              format={(pp) => <span className="tabular-nums" style={{ fontSize: 11 }}>{pp}%</span>}
+            />
+          </div>
+        </Descriptions.Item>
+        <Descriptions.Item label="修为">
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, width: "100%", flexWrap: "wrap" }}>
+            <span className="tabular-nums" style={{ fontSize: 13 }}>
+              {fmt(exp)} / {fmt(expNeeded)}
+            </span>
+            {expLack != null && (
+              <span style={{ fontSize: 12, color: expLack === 0 ? "var(--bamboo)" : "var(--ink-2)" }}>
+                差 {fmt(expLack)} 进阶
+              </span>
+            )}
+            <Progress
+              percent={expPct}
+              size="small"
+              strokeColor={expPct >= 100 ? "var(--bamboo)" : "var(--accent)"}
+              style={{ flex: 1, maxWidth: 120, margin: 0 }}
+              format={(pp) => <span className="tabular-nums" style={{ fontSize: 11 }}>{pp}%</span>}
+            />
+          </div>
+        </Descriptions.Item>
+      </Descriptions>
 
-      {open && <BagDetail bag={bag} search={search} onlyHas={onlyHas} constants={constants} />}
+      {/* 展开：双栏属性 + 物品格子（高度动画） */}
+      <CollapseBox open={isOpen}>
+        <BagDetail bag={bag} search={search} onlyHas={onlyHas} constants={constants} />
+      </CollapseBox>
+
+      {/* 免登录进入游戏官网：直接打开「设置」里配置的爬取地址（游戏服 Base），并注入该账号 Cookie */}
+      <div style={{ marginTop: 10, textAlign: "right" }}>
+        <Button
+          size="small"
+          type="link"
+          icon={<GlobalOutlined />}
+          disabled={!gameBase}
+          title={gameBase || "未获取到游戏服地址，请检查设置里的爬取地址"}
+          onClick={() => {
+            // 官网与游戏 API 同源同 Cookie（immortal_session）：直连 Base 即免登录
+            const url = new URL("/", gameBase);
+            window.open(`${url.origin}/?u=${encodeURIComponent(bag.username)}`, "_blank");
+          }}
+        >
+          进入官网
+        </Button>
+      </div>
     </Card>
   );
 }
 
-/** 展开后的背包详情（懒加载，仅在展开时渲染） */
+/** 展开详情：双栏属性 + 物品格子 */
 function BagDetail({
   bag, search, onlyHas, constants,
 }: {
   bag: Bag; search: string; onlyHas: boolean; constants: GameConstants | null;
 }) {
   const p = bag.player!;
-  const st = bag.stamina;
   const realm = bag.realm;
   const matNames = constants?.materialNames || {};
   const matCats = constants?.materialCategory || {};
@@ -153,15 +210,17 @@ function BagDetail({
   const nameOf = (k: string) => matNames[k] || k;
   const catOf = (k: string) => matCats[k] || "其他";
 
-  // 进阶状态
-  const breakText = realm
+  // 进阶状态（语义色）
+  const exp = realm?.exp ?? p.exp ?? 0;
+  const expNeeded = realm?.exp_needed ?? 0;
+  const breakStatus = realm
     ? realm.can_break
-      ? "可突破"
-      : realm.at_cap
-      ? "已达当前上限"
+      ? { text: "可突破", color: "#6FA287" }
       : realm.at_wall
-      ? `瓶颈（${realm.level_wall_name || ""}）`
-      : realm.block_reason || "修为不足"
+      ? { text: "瓶颈", color: "#C9A15F" }
+      : exp < expNeeded
+      ? { text: "修为不足", color: "#C47B6D" }
+      : { text: "正常", color: "#6E8CA0" }
     : null;
 
   let entries = Object.entries(bag.materials || {});
@@ -176,67 +235,94 @@ function BagDetail({
   }
   const sortedCats = Object.keys(groups).sort((a, b) => CAT_ORDER.indexOf(a) - CAT_ORDER.indexOf(b));
 
+  const labelStyle = { color: "var(--ink-2)", width: 80 } as const;
+
   return (
-    <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12 }}>
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
-        <Descriptions size="small" column={2} colon={false}>
-          <Descriptions.Item label="灵石"><Text type="warning">{fmt(p.spirit_stone)}</Text></Descriptions.Item>
-          <Descriptions.Item label="境界">{realmText(p, realmNames)}</Descriptions.Item>
-          <Descriptions.Item label="门派">{p.sect_name || "-"}</Descriptions.Item>
-          <Descriptions.Item label="修为">{fmt(p.exp)}</Descriptions.Item>
-          {p.great_dao_origin ? (
-            <Descriptions.Item label="大道本源">{fmt(p.great_dao_origin)}</Descriptions.Item>
-          ) : null}
-          {realm?.next_stage != null && (
-            <Descriptions.Item label="进阶目标">
-              {realm.next_realm_name || ""} {realm.next_stage} 阶
-              {realm.level_wall_name ? `（${realm.level_wall_name}）` : ""}
+    <>
+      <Divider style={{ margin: "12px 0" }} />
+      <Row gutter={[16, 8]}>
+        <Col xs={24} sm={12}>
+          <Descriptions column={1} size="small" styles={{ label: labelStyle }}>
+            <Descriptions.Item label="境界">
+              <span className="serif-title" style={{ color: realmColor(p.major_realm) }}>{realmText(p, realmNames)}</span>
             </Descriptions.Item>
-          )}
-          {breakText && (
-            <Descriptions.Item label="进阶状态">
-              <Tag color={realm?.can_break ? "success" : "warning"}>{breakText}</Tag>
-            </Descriptions.Item>
-          )}
-        </Descriptions>
+            <Descriptions.Item label="门派">{p.sect_name || "-"}</Descriptions.Item>
+            <Descriptions.Item label="阵营">{p.faction_name || "-"}</Descriptions.Item>
+          </Descriptions>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Descriptions column={1} size="small" styles={{ label: labelStyle }}>
+            {p.great_dao_origin ? (
+              <Descriptions.Item label="大道本源">
+                <span className="tabular-nums">{fmt(p.great_dao_origin)}</span>
+              </Descriptions.Item>
+            ) : null}
+            {realm?.next_stage != null && (
+              <Descriptions.Item label="进阶目标">
+                {realm.next_realm_name || ""} {realm.next_stage} 阶
+                {realm.level_wall_name ? `（${realm.level_wall_name}）` : ""}
+              </Descriptions.Item>
+            )}
+            {breakStatus && (
+              <Descriptions.Item label="进阶状态">
+                <Tag color={breakStatus.color} style={{ borderRadius: 4, marginInlineEnd: 0 }}>
+                  {breakStatus.text}
+                </Tag>
+                {realm?.at_wall && realm?.block_reason && (
+                  <span style={{ fontSize: 12, color: "var(--terracotta)", marginLeft: 4 }}>
+                    {realm.block_reason}
+                  </span>
+                )}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        </Col>
+      </Row>
 
-        {!entries.length && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配物品" />}
+      <Divider style={{ margin: "16px 0 12px" }} />
 
-        {sortedCats.map((cat) => {
-          const items = groups[cat].sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0]), "zh-CN"));
-          return (
-            <div key={cat}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong style={{ color: "#d48806" }}>
-                  {cat} <Text type="secondary">({items.length}种)</Text>
-                </Text>
-              </div>
-              {/* 物品格子：Statistic 显示数量，一次全展示 */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(105px, 1fr))",
-                  gap: 8,
-                }}
-              >
-                {items.map(([k, v]) => (
-                  <div
-                    key={k}
-                    style={{
-                      border: "1px solid #f0f0f0",
-                      borderRadius: 8,
-                      padding: "6px 10px",
-                      background: "#fafafa",
-                    }}
-                  >
-                    <Statistic title={nameOf(k)} value={Number(v)} valueStyle={{ fontSize: 16 }} />
-                  </div>
-                ))}
-              </div>
+      {!entries.length && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配物品" />}
+
+      {/* 物品分类：serif 分类标题 + 格子（名称小字 + 数量大字） */}
+      {sortedCats.map((cat) => {
+        const items = groups[cat].sort((a, b) => nameOf(a[0]).localeCompare(nameOf(b[0]), "zh-CN"));
+        return (
+          <div key={cat} style={{ marginBottom: 16 }}>
+            <div className="serif-title" style={{ fontSize: 14, fontWeight: 500, color: "var(--accent)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              {CAT_ICONS[cat] && (
+                <img src={CAT_ICONS[cat]} alt="" style={{ width: 16, height: 16, objectFit: "contain", display: "block" }} />
+              )}
+              {cat} <span style={{ color: "var(--ink-3)", fontSize: 12 }}>({items.length}种)</span>
             </div>
-          );
-        })}
-      </Space>
-    </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(105px, 1fr))",
+                gap: 8,
+              }}
+            >
+              {items.map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    background: "var(--cell)",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "var(--ink-2)", marginBottom: 2 }}>
+                    {nameOf(k)}
+                  </div>
+                  <div className="tabular-nums" style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+                    {fmt(v)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </>
   );
 }

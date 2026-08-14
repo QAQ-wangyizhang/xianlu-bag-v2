@@ -1,14 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 莫兰迪水墨色板 */
+:root {
+  --accent: #5b7b8c; /* 黛青（主色） */
+  --bamboo: #6fa287; /* 竹绿 */
+  --ochre: #c9a15f; /* 赭黄 */
+  --terracotta: #c47b6d; /* 陶红 */
+  --slate: #6e8ca0; /* 灰蓝 */
+  --ink: #33414a; /* 墨色正文 */
+  --ink-2: #6b7a84; /* 墨淡 */
+  --ink-3: #93a0a8; /* 墨浅 */
+  --paper: #f5f6f2; /* 纸感页面底 */
+  --muted: #f0f1ed; /* 弱化底（扁平 Tag） */
+  --cell: #fafaf8; /* 格子底（略暖） */
+  --line: #e3e6e0; /* 描边 */
+  --line-2: #ebede8; /* 描边浅 */
+  --tint: #edf2f0; /* 淡青悬停 */
+}
+
 body {
-  background: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
-    "Segoe UI", Roboto, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  /* 正文：霞鹜文楷（国风楷体，书卷气），离线回退系统楷体 */
+  font-family: "LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "PingFang SC",
+    "Microsoft YaHei", serif;
   font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 国风衬线标题（宋体题名，与手写正文形成层次） */
+.serif-title,
+.app-title {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", "KaiTi", serif;
+  letter-spacing: 0.05em;
+}
+
+/* 等宽数字 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 主内容与顶栏（桌面） */
+.app-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 24px 48px;
+}
+.app-header {
+  padding-inline: 32px;
+}
+
+/* 升段缺口材料网格：桌面 6 列，卡片间留足间距 */
+.gap-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12;
+  margin-top: 12;
+}
+.gap-grid .gap-stone {
+  grid-column: span 3;
+}
+/* 材料卡计划文案区：桌面固定 4 行等高；移动端自适应高度完整显示 */
+.gap-plan {
+  height: 78px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .app-main {
+    padding: 12px 12px 32px;
+  }
+  .app-header {
+    padding-inline: 16px;
+  }
+  /* 缺口材料 6 列 → 2 列（灵石卡占满整行） */
+  .gap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gap-grid .gap-stone {
+    grid-column: span 2;
+  }
+  /* 移动端计划文案完整展示，不截断 */
+  .gap-plan {
+    height: auto;
+    overflow: visible;
+  }
+  /* 禁止顶部主导航栏触屏滑动切换（防误触），点击切换不受影响 */
+  .main-tabs .ant-tabs-nav {
+    touch-action: pan-y;
+  }
+}
+
+/* 卡片：细描边 + 克制阴影 + 统一左右内边距 */
+.ant-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+body .ant-card .ant-card-body {
+  padding: 14px 16px;
+}
+/* 标题区：垂直留白充足，下划线与标题/内容都有间距（移动端换行标题尤其需要） */
+body .ant-card .ant-card-head {
+  min-height: auto;
+  padding-top: 14px;
+  padding-bottom: 14px;
 }
 
 /* 进度条 */
 .bar {
   height: 8px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--line-2);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -18,18 +128,13 @@ body {
   transition: width 0.3s;
 }
 
-/* 数字格式化 */
-.tnum {
-  font-variant-numeric: tabular-nums;
-}
-
 /* 滚动条 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: #cfd4cd;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-track {

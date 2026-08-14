@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query
 
 from ..store import accounts
 from ..client_manager import fetch_bag
+from .. import fetch_logs
 
 router = APIRouter()
 
@@ -16,13 +17,20 @@ _bag_cache: dict[str, tuple[float, dict]] = {}
 
 async def _fetch_bag_cached(username: str) -> dict:
     """带 TTL 缓存的背包获取"""
+    start = time.monotonic()
     now = time.monotonic()
     hit = _bag_cache.get(username)
     if hit and now - hit[0] < BAG_CACHE_TTL:
+        fetch_logs.log_fetch(username, True, int((time.monotonic() - start) * 1000), "缓存")
         return hit[1]
-    data = await fetch_bag(username)
-    _bag_cache[username] = (now, data)
-    return data
+    try:
+        data = await fetch_bag(username)
+        _bag_cache[username] = (now, data)
+        fetch_logs.log_fetch(username, True, int((time.monotonic() - start) * 1000))
+        return data
+    except Exception as e:
+        fetch_logs.log_fetch(username, False, int((time.monotonic() - start) * 1000), str(e)[:100])
+        raise
 
 
 @router.get("/api/bag")
@@ -46,3 +54,9 @@ async def get_all_bags():
 
     results = await asyncio.gather(*[fetch_one(a) for a in accounts])
     return list(results)
+
+
+@router.get("/api/fetch-logs")
+async def get_fetch_logs(limit: int = Query(100, ge=1, le=500)):
+    """拉取日志（新的在前）"""
+    return {"logs": fetch_logs.recent(limit)}

@@ -26,7 +26,7 @@ export default function SeclusionTab({
     <div>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space wrap>
-          <Text strong style={{ fontSize: 16, color: "#d48806" }}>闭关修炼</Text>
+          <Text strong style={{ fontSize: 16, color: "var(--accent)" }}>闭关修炼</Text>
           <Text type="secondary">{running}/{accounts.length} 个账号运行中</Text>
           <span style={{ flex: 1 }} />
           <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => secl.startAll()}>

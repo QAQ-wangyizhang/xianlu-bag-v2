@@ -3,13 +3,21 @@
 import { Card, Space, Tag, Typography } from "antd";
 import type { Bag, GameConstants } from "@/types";
 import { isOddWeek } from "@/lib/farm";
+import { realmColor, realmBg } from "@/lib/realm";
 
 const { Text } = Typography;
 
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const REALM_LABELS: Record<string, string> = {
   lianqi: "炼气", zhuji: "筑基", jindan: "金丹", yuanying: "元婴",
-  huashen: "化神", lianxu: "炼虚", heti: "合体",
+  huashen: "化神", lianxu: "炼虚", heti: "合体", dacheng: "大乘", dujie: "渡劫",
+};
+
+/** 五行本源材料 key → 图标路径 */
+const ELEM_ICONS: Record<string, string> = {
+  fire_essence: "/icons/elem-fire.png",
+  water_essence: "/icons/elem-water.png",
+  thunder_essence: "/icons/elem-thunder.png",
 };
 
 export default function DungeonToday({ bags, constants }: { bags: Bag[]; constants: GameConstants | null }) {
@@ -33,6 +41,17 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
 
   // 按境界分组
   const realmVariants: Record<string, { mk: string; mq: number; sk: string; sq: number }> = {};
+
+  // 掉落条目渲染：本源材料带图标，其余纯文本
+  const renderDrop = (k: string, qty: number) => {
+    const icon = ELEM_ICONS[k];
+    return (
+      <Tag key={k} color="#5B7B8C" style={{ marginInlineEnd: 0, borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
+        {icon && <img src={icon} alt="" style={{ width: 14, height: 14, objectFit: "contain", display: "block" }} />}
+        {nameOf(k)}×{qty}
+      </Tag>
+    );
+  };
   for (const bag of bags) {
     const rk = bag.player?.major_realm;
     if (!rk || realmVariants[rk]) continue;
@@ -49,18 +68,18 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
     <Card size="small" style={{ marginBottom: 16 }}>
       <Space direction="vertical" size={8} style={{ width: "100%" }}>
         <Space wrap>
-          <Text strong style={{ color: "#d48806" }}>🗺️ 今天五行秘境 · {WEEKDAY_NAMES[wd]}</Text>
+          <Text strong style={{ color: "var(--accent)" }}>🗺️ 今天五行秘境 · {WEEKDAY_NAMES[wd]}</Text>
           <Tag>{weekLabel}</Tag>
-          <Tag color="gold">{dg.name}</Tag>
+          <Tag color="#5B7B8C">{dg.name}</Tag>
         </Space>
         <Text type="secondary" style={{ fontSize: 12 }}>以下为每次扫荡（消耗 1 体力）的产出：</Text>
 
         {Object.keys(realmVariants).length === 0 ? (
           <Space wrap size={8}>
-            {mainKey && <Tag color="gold">{nameOf(mainKey)}×{mainQty}</Tag>}
-            {subKey && <Tag color="gold">{nameOf(subKey)}×{subQty}</Tag>}
+            {mainKey && <Tag color="#5B7B8C">{nameOf(mainKey)}×{mainQty}</Tag>}
+            {subKey && <Tag color="#5B7B8C">{nameOf(subKey)}×{subQty}</Tag>}
             {bonusEntries.map(([bk, bv]) => (
-              <Tag color="gold" key={bk}>{nameOf(bk)}×{bv}</Tag>
+              <Tag color="#5B7B8C" key={bk}>{nameOf(bk)}×{bv}</Tag>
             ))}
             <Tag>灵石×30</Tag>
           </Space>
@@ -71,14 +90,17 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
             if (v.sk) parts.push(`${nameOf(v.sk)}×${v.sq}`);
             for (const [bk, bv] of bonusEntries) parts.push(`${nameOf(bk)}×${bv}`);
             return (
-              <div key={rk}>
-                <Tag style={{ minWidth: 44, textAlign: "center" }}>{REALM_LABELS[rk] || rk}</Tag>
-                <Space wrap size={4} style={{ marginLeft: 8 }}>
+              <div key={rk} style={{ marginBottom: 10 }}>
+                {/* 境界标签一行（带境界色），掉落物下一行左对齐，换行有间距 */}
+                <Tag style={{ background: realmBg(rk), border: "none", color: realmColor(rk), minWidth: 44, textAlign: "center", borderRadius: 4 }}>
+                  {REALM_LABELS[rk] || rk}
+                </Tag>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
                   {parts.map((p, i) => (
-                    <Tag color="gold" key={i}>{p}</Tag>
+                    <Tag color="#5B7B8C" key={i} style={{ marginInlineEnd: 0, borderRadius: 4 }}>{p}</Tag>
                   ))}
-                  <Tag>灵石×30</Tag>
-                </Space>
+                  <Tag style={{ marginInlineEnd: 0, borderRadius: 4 }}>灵石×30</Tag>
+                </div>
               </div>
             );
           })

@@ -10,7 +10,7 @@ from .config import ACCOUNTS_FILE, SESSIONS_FILE, OWNERS_FILE, SQLITE_FILE
 # ---- 内存状态 ----
 accounts: list[dict[str, str]] = []  # [{username, password, owner?}]
 sessions: dict[str, dict[str, str]] = {}  # {username: {cookie_key: cookie_val}}
-owners: list[str] = []  # 归属人名单（独立存储，可先建归属人再分配）
+owners: list[dict[str, str]] = []  # [{name, color?}] 归属人名单（可自定义标签色）
 
 # SQLite 连接（线程安全用 Lock 保护）
 _db: sqlite3.Connection | None = None
@@ -40,7 +40,15 @@ def load():
             owners.extend(loaded if isinstance(loaded, list) else [])
     except Exception:
         owners.clear()
+    _normalize_owners()
     _init_db()
+
+
+def _normalize_owners():
+    """迁移：旧版字符串列表 → 对象列表 [{name, color?}]"""
+    for i, o in enumerate(owners):
+        if isinstance(o, str):
+            owners[i] = {"name": o}
 
 
 def save_accounts():
@@ -123,19 +131,37 @@ def set_account_owner(username: str, owner: str):
 
 
 # ---- 归属人操作 ----
-def add_owner(name: str):
+def find_owner(name: str) -> dict | None:
+    return next((o for o in owners if isinstance(o, dict) and o["name"] == name), None)
+
+
+def add_owner(name: str, color: str | None = None):
     """创建归属人（可先创建、后分配账号）"""
     name = name.strip()
-    if name and name not in owners:
-        owners.append(name)
+    if name and not find_owner(name):
+        entry: dict[str, str] = {"name": name}
+        if color:
+            entry["color"] = color
+        owners.append(entry)
         save_owners()
+
+
+def set_owner_color(name: str, color: str):
+    """设置归属人标签颜色"""
+    o = find_owner(name)
+    if not o:
+        raise ValueError(f"未找到归属人 {name}")
+    o["color"] = color
+    save_owners()
 
 
 def remove_owner(name: str):
     """删除归属人，其名下账号全部置为未分配"""
-    if name in owners:
-        owners.remove(name)
-        save_owners()
+    for i, o in enumerate(owners):
+        if isinstance(o, dict) and o["name"] == name:
+            owners.pop(i)
+            break
+    save_owners()
     for a in accounts:
         if a.get("owner") == name:
             a.pop("owner", None)

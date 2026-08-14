@@ -18,6 +18,12 @@ class AccountOwner(BaseModel):
 
 class OwnerCreate(BaseModel):
     name: str
+    color: str | None = None
+
+
+class OwnerColorUpdate(BaseModel):
+    name: str
+    color: str
 
 
 class OwnerRemove(BaseModel):
