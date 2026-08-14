@@ -1,0 +1,16 @@
+[Unit]
+Description=Xianlu Bag Tool (修仙录 · 多账号工具)
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/xianlu-bag-v2
+ExecStart=/opt/xianlu-bag-v2/.venv/bin/python -m uvicorn backend.main:app --host 0.0.0.0 --port 5917
+Restart=always
+RestartSec=3
+# 可选：换端口/换游戏服默认地址
+# Environment=PORT=5917
+# Environment=GAME_HOST=121.41.170.75
+# Environment=GAME_PORT=18251
+
+[Install]
+WantedBy=multi-user.target
