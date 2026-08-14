@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timedelta
 
 from .config import DATA_DIR
+from .atomic import atomic_write_text
 
 LOG_FILE = DATA_DIR / "fetch_logs.json"
 MAX_ENTRIES = 500
@@ -28,7 +29,7 @@ def load():
 
 def _save():
     try:
-        LOG_FILE.write_text(json.dumps(_logs, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_write_text(LOG_FILE, json.dumps(_logs, ensure_ascii=False, indent=2))
     except Exception:
         pass
 

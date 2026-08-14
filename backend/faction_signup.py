@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from .config import DATA_DIR
 from .client_manager import get_client
 from .store import accounts, find_account
+from .atomic import atomic_write_text
 
 CONFIG_FILE = DATA_DIR / "signup_config.json"
 LOG_FILE = DATA_DIR / "signup_logs.json"
@@ -44,11 +45,11 @@ def load():
 
 
 def _save_config():
-    CONFIG_FILE.write_text(json.dumps(_config, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(CONFIG_FILE, json.dumps(_config, ensure_ascii=False, indent=2))
 
 
 def _save_logs():
-    LOG_FILE.write_text(json.dumps(_logs, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(LOG_FILE, json.dumps(_logs, ensure_ascii=False, indent=2))
 
 
 def is_enabled(username: str) -> bool:

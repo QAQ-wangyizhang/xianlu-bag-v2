@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+from .atomic import atomic_write_text
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
@@ -59,4 +61,4 @@ def set_game_config(host: str, port: int):
     cfg = _read_config()
     cfg["host"] = str(host).strip()
     cfg["port"] = int(port)
-    CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(CONFIG_FILE, json.dumps(cfg, ensure_ascii=False, indent=2))

@@ -6,6 +6,7 @@ import asyncio
 from typing import Any
 
 from .config import ACCOUNTS_FILE, SESSIONS_FILE, OWNERS_FILE, SQLITE_FILE
+from .atomic import atomic_write_text
 
 # ---- 内存状态 ----
 accounts: list[dict[str, str]] = []  # [{username, password, owner?}]
@@ -52,15 +53,15 @@ def _normalize_owners():
 
 
 def save_accounts():
-    ACCOUNTS_FILE.write_text(json.dumps(accounts, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(ACCOUNTS_FILE, json.dumps(accounts, ensure_ascii=False, indent=2))
 
 
 def save_owners():
-    OWNERS_FILE.write_text(json.dumps(owners, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(OWNERS_FILE, json.dumps(owners, ensure_ascii=False, indent=2))
 
 
 def save_sessions():
-    SESSIONS_FILE.write_text(json.dumps(sessions, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(SESSIONS_FILE, json.dumps(sessions, ensure_ascii=False, indent=2))
 
 
 def _init_db():
