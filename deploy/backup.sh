@@ -7,7 +7,7 @@
 # ============================================================
 set -euo pipefail
 
-APP_DIR=/opt/xianlu-bag-v2
+APP_DIR=/opt/xianlu-bag-v2-live
 BACKUP_DIR=/backup
 KEEP=14  # 保留最近 14 份
 
