@@ -80,9 +80,12 @@ if FRONTEND_OUT.exists():
         file_path = FRONTEND_OUT / full_path
         if file_path.is_file():
             resp = FileResponse(file_path)
-            # 哈希命名的不可变静态资源 → 浏览器长缓存，连请求都不发
             if full_path.startswith("_next/static/"):
+                # 哈希命名的不可变静态资源 → 浏览器长缓存，连请求都不发
                 resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            else:
+                # index.html 等入口 HTML：每次强制 revalidate，避免缓存旧页面引用已删除的 chunk
+                resp.headers["Cache-Control"] = "no-cache"
             return resp
         # SPA fallback
         index = FRONTEND_OUT / "index.html"
