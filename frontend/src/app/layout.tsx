@@ -7,6 +7,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "修仙录 · 多账号工具",
   description: "修仙录多账号背包查看 / 升段缺口计算 / 闭关自动化",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 // 移动端视口适配

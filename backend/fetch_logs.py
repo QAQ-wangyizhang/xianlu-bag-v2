@@ -1,8 +1,8 @@
-"""拉取日志：记录每次账号拉取结果，每日 0 点自动清理"""
+"""拉取日志：记录每次账号拉取结果，每小时检查清理（跨天清空，超上限截断）"""
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from .config import DATA_DIR
 from .atomic import atomic_write_text
@@ -57,7 +57,7 @@ def recent(limit: int = 100) -> list[dict]:
 
 
 async def cleanup_loop():
-    """每日 0 点清理日志"""
+    """每小时清理日志（跨天时清空，不跨天仅按条数上限截断）"""
     global _logs, _last_date
     while True:
         try:
@@ -66,10 +66,12 @@ async def cleanup_loop():
             if _last_date is not None and _last_date != today:
                 _logs.clear()
                 _save()
-                print(f"[拉取日志] {today} 0 点已清理")
+                print(f"[拉取日志] 跨天 {today} 已清理")
             _last_date = today
-            # 睡到明天 0 点 + 10 秒
-            tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=10, microsecond=0)
-            await asyncio.sleep(max(10, (tomorrow - now).total_seconds()))
+            # 超上限则截断（每小时检查一次）
+            if len(_logs) > MAX_ENTRIES:
+                _logs = _logs[-MAX_ENTRIES:]
+                _save()
+            await asyncio.sleep(3600)
         except Exception:
             await asyncio.sleep(3600)

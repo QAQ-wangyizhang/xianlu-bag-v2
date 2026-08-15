@@ -17,7 +17,10 @@ export default function StoneCard({ have, need, lack }: { have: number; need: nu
     <Card size="small" style={{ borderColor: "var(--ochre)", marginBottom: 12 }}>
       <Space direction="vertical" size={12} style={{ width: "100%" }}>
         <Space>
-          <Text strong style={{ color: "var(--accent)" }}>💎 灵石</Text>
+          <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4 }}>
+            <img src="/icons/mat-spirit-stone.png" alt="" style={{ width: 16, height: 16, objectFit: "contain", alignSelf: "center", display: "block" }} />
+            <Text strong style={{ color: "var(--accent)" }}>灵石</Text>
+          </span>
           {lack === 0
             ? <Tag color="success">✓ 已充足</Tag>
             : <Tag color="error">缺 {fmt(lack)}</Tag>}

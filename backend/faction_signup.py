@@ -24,6 +24,9 @@ REGISTER_OPEN_MINUTE = 30
 REGISTER_CLOSE_HOUR = 15
 REGISTER_CLOSE_MINUTE = 50
 
+# 报名生效日：周一(1)~周五(5)
+ACTIVE_WEEKDAYS = {1, 2, 3, 4, 5}
+
 _config: dict[str, dict] = {}  # {username: {"enabled": bool}}
 _logs: dict[str, dict] = {}  # {username: {week_key: {status, reason, time, session_name}}}
 _lock = asyncio.Lock()
@@ -185,11 +188,14 @@ async def run_all() -> list[dict]:
 
 
 async def run_loop():
-    """后台定时器：报名窗口前后 5 分钟内每 30s 轮询一次"""
+    """后台定时器：报名窗口前后 5 分钟内每 30s 轮询一次（仅周一至周五）"""
     while True:
         try:
             await asyncio.sleep(30)
             now = datetime.now().astimezone()
+            # 仅周一至周五报名，其余日期直接跳过
+            if now.weekday() not in ACTIVE_WEEKDAYS:
+                continue
             # 找到第一个开启的账号，看今日场次窗口
             enabled_users = [a["username"] for a in accounts if is_enabled(a["username"])]
             if not enabled_users:

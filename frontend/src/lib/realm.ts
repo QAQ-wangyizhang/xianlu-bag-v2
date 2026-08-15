@@ -14,6 +14,24 @@ const REALM_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = "#6B7A84";
 
+/** 境界图标路径（9 个境界全覆盖，位于 public/icons） */
+const REALM_ICONS: Record<string, string> = {
+  lianqi: "/icons/realm-lianqi.png",
+  zhuji: "/icons/realm-zhuji.png",
+  jindan: "/icons/realm-jindan.png",
+  yuanying: "/icons/realm-yuanying.png",
+  huashen: "/icons/realm-huashen.png",
+  lianxu: "/icons/realm-lianxu.png",
+  heti: "/icons/realm-heti.png",
+  dacheng: "/icons/realm-dacheng.png",
+  dujie: "/icons/realm-dujie.png",
+};
+
+export function realmIcon(key?: string | null): string | undefined {
+  if (!key) return undefined;
+  return REALM_ICONS[key];
+}
+
 export function realmColor(key?: string | null): string {
   if (!key) return DEFAULT_COLOR;
   return REALM_COLORS[key] || DEFAULT_COLOR;

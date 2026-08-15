@@ -1,20 +1,7 @@
 "use client";
 
 import { Tag } from "antd";
-import { realmColor, realmBg } from "@/lib/realm";
-
-/** 已配好图标的境界键 → 图标路径（9 个境界全覆盖） */
-const REALM_ICONS: Record<string, string> = {
-  lianqi: "/icons/realm-lianqi.png",
-  zhuji: "/icons/realm-zhuji.png",
-  jindan: "/icons/realm-jindan.png",
-  yuanying: "/icons/realm-yuanying.png",
-  huashen: "/icons/realm-huashen.png",
-  lianxu: "/icons/realm-lianxu.png",
-  heti: "/icons/realm-heti.png",
-  dacheng: "/icons/realm-dacheng.png",
-  dujie: "/icons/realm-dujie.png",
-};
+import { realmColor, realmBg, realmIcon } from "@/lib/realm";
 
 /** 境界 Tag（带境界专属色 + 境界图标，图标居中） */
 export default function RealmTag({
@@ -22,24 +9,25 @@ export default function RealmTag({
 }: {
   realmKey?: string | null; name: string; fontSize?: number;
 }) {
-  const icon = realmKey ? REALM_ICONS[realmKey] : undefined;
+  const icon = realmIcon(realmKey);
   return (
     <Tag
       style={{
         background: realmBg(realmKey), border: "none", color: realmColor(realmKey), fontSize,
         borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4,
+        height: 24, padding: "0 8px", lineHeight: 1, boxSizing: "border-box",
       }}
     >
       {icon && (
         <img
           src={icon} alt=""
           style={{
-            width: Math.round(fontSize * 1.4), height: Math.round(fontSize * 1.4),
-            objectFit: "contain", display: "block",
+            width: 16, height: 16,
+            objectFit: "contain", display: "block", flexShrink: 0,
           }}
         />
       )}
-      <span style={{ lineHeight: 1.3 }}>{name}</span>
+      <span style={{ lineHeight: 1 }}>{name}</span>
     </Tag>
   );
 }

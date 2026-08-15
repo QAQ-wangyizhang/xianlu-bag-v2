@@ -308,7 +308,7 @@ export default function AccountsTab({
         )}
       </Modal>
 
-      {/* 拉取日志（每日 0 点自动清理） */}
+      {/* 拉取日志（每小时自动清理） */}
       <FetchLogs />
     </div>
   );
@@ -336,7 +336,7 @@ function FetchLogs() {
   return (
     <Card
       size="small"
-      title={<Text strong style={{ color: "var(--accent)" }}>拉取日志（每日 0 点自动清理）</Text>}
+      title={<Text strong style={{ color: "var(--accent)" }}>拉取日志（每小时自动清理）</Text>}
       extra={<Button type="link" size="small" onClick={load} loading={loading}>刷新</Button>}
       style={{ marginTop: 16 }}
     >

@@ -21,18 +21,19 @@ export default function SectTag({ name, fontSize = 12 }: { name?: string | null;
       style={{
         background: sectBg(name), border: "none", color: sectColor(name), fontSize,
         borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4,
+        height: 24, padding: "0 8px", lineHeight: 1, boxSizing: "border-box",
       }}
     >
       {icon && (
         <img
           src={icon} alt=""
           style={{
-            width: Math.round(fontSize * 1.4), height: Math.round(fontSize * 1.4),
-            objectFit: "contain", display: "block",
+            width: 16, height: 16,
+            objectFit: "contain", display: "block", flexShrink: 0,
           }}
         />
       )}
-      <span style={{ lineHeight: 1.3 }}>{label}</span>
+      <span style={{ lineHeight: 1 }}>{label}</span>
     </Tag>
   );
 }

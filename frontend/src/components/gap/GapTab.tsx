@@ -8,6 +8,7 @@ import {
 import { CaretRightOutlined } from "@ant-design/icons";
 import type { Account, Bag, GameConstants, GradeTier, Owner } from "@/types";
 import { fmt, fmtWan, realmText } from "@/lib/format";
+import { realmIcon } from "@/lib/realm";
 import { calcFarmPlan, defaultTierForRealm } from "@/lib/farm";
 import DungeonToday from "./DungeonToday";
 import StoneCard from "./StoneCard";
@@ -15,6 +16,13 @@ import SectTag from "@/components/SectTag";
 import OwnerTag from "@/components/OwnerTag";
 import RealmTag from "@/components/RealmTag";
 import CollapseBox from "@/components/CollapseBox";
+
+/** 五行本源材料 key → 图标路径 */
+const ELEM_ICONS: Record<string, string> = {
+  fire_essence: "/icons/elem-fire.png",
+  water_essence: "/icons/elem-water.png",
+  thunder_essence: "/icons/elem-thunder.png",
+};
 
 const { Text } = Typography;
 
@@ -128,8 +136,18 @@ function GapControls({ tiers, tierKey, setTierKey, pieces, setPieces, onlyLack, 
             <Select
               value={tierKey}
               onChange={setTierKey}
-              style={{ width: 240 }}
-              options={tiers.map((t: GradeTier) => ({ value: t.key, label: `${t.name}（${t.range}级 · 单件）` }))}
+              style={{ width: 260 }}
+              options={tiers.map((t: GradeTier) => ({
+                value: t.key,
+                label: (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    {realmIcon(t.key) && (
+                      <img src={realmIcon(t.key)} alt="" style={{ width: 16, height: 16, objectFit: "contain", display: "block" }} />
+                    )}
+                    {t.name.replace(/⭐/g, "").trim()}（{t.range}级 · 单件）
+                  </span>
+                ),
+              }))}
             />
           </Space>
           <Space>
@@ -192,13 +210,10 @@ export function GapCard({ bag, owner, ownerColor, tier, pieces, onlyLack, nameOf
           flexShrink: 0,
         }}
       />
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
         <span className="serif-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
           {p.name || bag.username}
         </span>
-        <Tag style={{ background: "var(--muted)", border: "none", color: "var(--slate)", fontSize: 12 }}>
-          {bag.username}
-        </Tag>
         {owner && <OwnerTag name={owner} color={ownerColor} />}
         <SectTag name={p.sect_name} />
         <RealmTag realmKey={p.major_realm} name={realmText(p, realmNames)} />
@@ -217,7 +232,10 @@ export function GapCard({ bag, owner, ownerColor, tier, pieces, onlyLack, nameOf
       {/* 折叠态：灵石缺口 + 刷满天数摘要 */}
       {!open && stoneNeed > 0 && (
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap", paddingTop: 4 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>灵石缺口</Text>
+          <span style={{ display: "inline-flex", alignItems: "baseline", gap: 4 }}>
+            <img src="/icons/mat-spirit-stone.png" alt="" style={{ width: 14, height: 14, objectFit: "contain", alignSelf: "center", display: "block" }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>灵石缺口</Text>
+          </span>
           <Text className="tabular-nums" style={{ fontSize: 13, color: stoneLack > 0 ? "var(--terracotta)" : "var(--bamboo)", fontWeight: 600 }}>
             {stoneLack > 0 ? `缺 ${fmtWan(stoneLack)}` : "已充足 ✓"}
           </Text>
@@ -265,9 +283,14 @@ export function GapCard({ bag, owner, ownerColor, tier, pieces, onlyLack, nameOf
             <div key={g.key} style={{ minWidth: 0 }}>
               <Card size="small" style={{ borderColor: g.lack > 0 ? "#f0dcd5" : "#d9e6dc" }}>
                 <Space align="end" wrap style={{ width: "100%", justifyContent: "space-between" }} size={4}>
-                  <Text strong={g.lack > 0} type={g.lack === 0 ? "success" : undefined} ellipsis style={{ maxWidth: 100 }}>
-                    {g.name}
-                  </Text>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                    {ELEM_ICONS[g.key] && (
+                      <img src={ELEM_ICONS[g.key]} alt="" style={{ width: 15, height: 15, objectFit: "contain", display: "block", flexShrink: 0 }} />
+                    )}
+                    <Text strong={g.lack > 0} type={g.lack === 0 ? "success" : undefined} ellipsis style={{ maxWidth: 100 }}>
+                      {g.name}
+                    </Text>
+                  </span>
                   {g.lack > 0
                     ? <Tag color="error" style={{ marginInlineEnd: 0 }}>缺 {fmt(g.lack)}</Tag>
                     : <Tag color="success" style={{ marginInlineEnd: 0 }}>✓</Tag>}

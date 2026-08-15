@@ -8,7 +8,14 @@ const DEFAULT_COLOR = "#6E8CA0";
 export default function OwnerTag({ name, color, fontSize = 12 }: { name: string; color?: string; fontSize?: number }) {
   const c = color || DEFAULT_COLOR;
   return (
-    <Tag style={{ background: `${c}1A`, border: "none", color: c, fontSize }}>
+    <Tag
+      style={{
+        background: `${c}1A`, border: "none", color: c, fontSize,
+        borderRadius: 4,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        height: 24, padding: "0 8px", lineHeight: 1, boxSizing: "border-box",
+      }}
+    >
       {name}
     </Tag>
   );

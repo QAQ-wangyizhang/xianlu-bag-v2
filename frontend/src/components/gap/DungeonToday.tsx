@@ -43,7 +43,8 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
   const realmVariants: Record<string, { mk: string; mq: number; sk: string; sq: number }> = {};
 
   // 掉落条目渲染：本源材料带图标，其余纯文本
-  const renderDrop = (k: string, qty: number) => {
+  const renderDrop = (k: string | undefined, qty: number) => {
+    if (!k) return null;
     const icon = ELEM_ICONS[k];
     return (
       <Tag key={k} color="#5B7B8C" style={{ marginInlineEnd: 0, borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -76,19 +77,17 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
 
         {Object.keys(realmVariants).length === 0 ? (
           <Space wrap size={8}>
-            {mainKey && <Tag color="#5B7B8C">{nameOf(mainKey)}×{mainQty}</Tag>}
-            {subKey && <Tag color="#5B7B8C">{nameOf(subKey)}×{subQty}</Tag>}
-            {bonusEntries.map(([bk, bv]) => (
-              <Tag color="#5B7B8C" key={bk}>{nameOf(bk)}×{bv}</Tag>
-            ))}
+            {mainKey && renderDrop(mainKey, mainQty)}
+            {subKey && renderDrop(subKey, subQty)}
+            {bonusEntries.map(([bk, bv]) => renderDrop(bk, bv))}
             <Tag>灵石×30</Tag>
           </Space>
         ) : (
           Object.entries(realmVariants).map(([rk, v]) => {
-            const parts: string[] = [];
-            if (v.mk) parts.push(`${nameOf(v.mk)}×${v.mq}`);
-            if (v.sk) parts.push(`${nameOf(v.sk)}×${v.sq}`);
-            for (const [bk, bv] of bonusEntries) parts.push(`${nameOf(bk)}×${bv}`);
+            const parts: { k: string; qty: number }[] = [];
+            if (v.mk) parts.push({ k: v.mk, qty: v.mq });
+            if (v.sk) parts.push({ k: v.sk, qty: v.sq });
+            for (const [bk, bv] of bonusEntries) parts.push({ k: bk, qty: bv });
             return (
               <div key={rk} style={{ marginBottom: 10 }}>
                 {/* 境界标签一行（带境界色），掉落物下一行左对齐，换行有间距 */}
@@ -97,7 +96,7 @@ export default function DungeonToday({ bags, constants }: { bags: Bag[]; constan
                 </Tag>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
                   {parts.map((p, i) => (
-                    <Tag color="#5B7B8C" key={i} style={{ marginInlineEnd: 0, borderRadius: 4 }}>{p}</Tag>
+                    <span key={i}>{renderDrop(p.k, p.qty)}</span>
                   ))}
                   <Tag style={{ marginInlineEnd: 0, borderRadius: 4 }}>灵石×30</Tag>
                 </div>

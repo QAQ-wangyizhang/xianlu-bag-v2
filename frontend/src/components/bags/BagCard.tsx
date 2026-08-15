@@ -96,13 +96,10 @@ export default function BagCard({
           flexShrink: 0,
         }}
       />
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-end", flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
         <span className="serif-title" style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
           {p.name || bag.username}
         </span>
-        <Tag style={{ background: "var(--muted)", border: "none", color: "var(--slate)", fontSize: 12 }}>
-          {bag.username}
-        </Tag>
         {owner && <OwnerTag name={owner} color={ownerColor} />}
         <SectTag name={p.sect_name} />
         <RealmTag realmKey={p.major_realm} name={realmText(p, realmNames)} />
