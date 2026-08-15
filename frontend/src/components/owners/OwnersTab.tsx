@@ -131,6 +131,7 @@ function PersonDetail({
 
   // 只拉当前归属下的账号（并发流式，拉一个更新一个）
   const refreshOwner = async () => {
+    if (refreshing) return;
     setRefreshing(true);
     const usernames = accounts.map((a) => a.username);
     // 先置占位
@@ -281,7 +282,7 @@ function PersonDetail({
             ) : bag.loading ? (
               <Card size="small">
                 <Space>
-                  <Text strong>{a.username}</Text>
+                  <Text strong>{tabName}</Text>
                   <Tag color="processing">加载中…</Tag>
                 </Space>
               </Card>

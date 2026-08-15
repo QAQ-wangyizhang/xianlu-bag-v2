@@ -14,7 +14,8 @@ export function useBags() {
   const [bags, setBags] = useState<Bag[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadHint, setLoadHint] = useState("");
-  const loadingRef = useRef(false);
+  // 共享忙碌锁：全部刷新 / 归属人刷新互斥，避免并发覆盖状态
+  const busyRef = useRef(false);
 
   const loadOwners = useCallback(async () => {
     try {
@@ -62,8 +63,8 @@ export function useBags() {
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setLoading(true);
     try {
       const accs = await loadAccounts();
@@ -87,7 +88,7 @@ export function useBags() {
     } catch (e: any) {
       setBags((prev) => prev.map((b) => ({ ...b, loading: false, ok: false, error: e.message })));
     } finally {
-      loadingRef.current = false;
+      busyRef.current = false;
       setLoading(false);
       setLoadHint("");
     }
@@ -95,10 +96,16 @@ export function useBags() {
 
   /** 拉取指定用户名列表（归属人详情用） */
   const loadBagsFor = useCallback(async (usernames: string[], onOne?: (i: number, bag: Bag) => void) => {
-    const idxMap = new Map(usernames.map((u, i) => [u, i]));
-    await fetchBagsStream(usernames, (i, bag) => {
-      onOne?.(idxMap.get(bag.username) ?? i, bag);
-    });
+    if (busyRef.current) return;  // 另一路刷新进行中，忽略本次，避免状态被并发覆盖
+    busyRef.current = true;
+    try {
+      const idxMap = new Map(usernames.map((u, i) => [u, i]));
+      await fetchBagsStream(usernames, (i, bag) => {
+        onOne?.(idxMap.get(bag.username) ?? i, bag);
+      });
+    } finally {
+      busyRef.current = false;
+    }
   }, [fetchBagsStream]);
 
   return { accounts, owners, bags, loading, loadHint, loadAccounts, loadAll, loadBagsFor };
