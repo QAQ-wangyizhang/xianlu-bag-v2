@@ -65,9 +65,9 @@ curl -s http://localhost:5917/api/constants | head -c 200   # API 通
 | 查看状态 | `systemctl status xianlu` |
 | 看日志 | `journalctl -u xianlu -f` |
 | 重启 | `systemctl restart xianlu` |
-| 更新代码 | `cd /opt/xianlu-bag-v2 && git pull && systemctl restart xianlu` |
-| 备份数据 | `sudo bash /opt/xianlu-bag-v2/deploy/backup.sh` |
-| 定时备份 | `crontab -e` 加：`0 3 * * * /opt/xianlu-bag-v2/deploy/backup.sh >> /var/log/xianlu-backup.log 2>&1` |
+| 更新代码 | `sudo bash /opt/xianlu-bag-v2-live/deploy/deploy.sh`（git pull + 前端重建 + 重启，一步完成） |
+| 备份数据 | `sudo bash /opt/xianlu-bag-v2-live/deploy/backup.sh` |
+| 定时备份 | `crontab -e` 加：`0 3 * * * /opt/xianlu-bag-v2-live/deploy/backup.sh >> /var/log/xianlu-backup.log 2>&1` |
 
 ## 七、常见问题
 
