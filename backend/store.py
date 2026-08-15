@@ -68,6 +68,9 @@ def _init_db():
     """初始化 SQLite 表"""
     global _db
     _db = sqlite3.connect(str(SQLITE_FILE), check_same_thread=False)
+    # WAL：读写分离 + 减少每次 commit 的磁盘 fsync 压力；闭关日志是纯追加，无多连接事务，完全适用
+    _db.execute("PRAGMA journal_mode=WAL")
+    _db.execute("PRAGMA synchronous=NORMAL")
     _db.execute("""
         CREATE TABLE IF NOT EXISTS seclusion_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
